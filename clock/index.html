@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Timer</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            overflow: hidden;
+            margin: 0;
+            height: 85vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .container {
+            background-color: rgba(90, 0, 0, 0.9);
+            border: 5px solid;
+            border-color: rgba(200, 50, 50 , 1);
+            padding: 20px;
+            display: inline-block;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(255, 80, 80, 1); /*Glow Effect*/
+        }
+        #current-time, #timer {
+            font-size: 40px;
+            font-weight: bold;
+        }
+        #current-period {
+            font-size: 50px;
+        }
+        .slider {
+            width: 20%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrixCanvas"></canvas>
+    <div class="container">
+        <h1 id="current-period">Loading...</h1>
+        <p id="current-time">Loading current time...</p>
+        <p id="timer">Loading...</p>
+    </div>
+    <input type="range" id="colorSlider" class="slider" min="0" max="360" value="0">
+
+    <script>
+        // Matrix Background Effect
+        const canvas = document.getElementById("matrixCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const columns = Math.floor(canvas.width / 20);
+        const drops = Array(columns).fill(0);
+        const characters = "12345︎67890膽拉灣戰對這岩次合心手田水口廿卜山戈人心日尸木火土竹十大中難金女月弓";
+
+        let value = 0;
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = matrixColor;
+            ctx.font = "18px monospace";
+
+            ctx.shadowColor = matrixGlowColor; // Glow color
+            ctx.shadowBlur = 8; // Glow intensity
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = characters[Math.floor(Math.random() * characters.length)];
+                ctx.fillText(text, i * 20, drops[i] * 20);
+
+                if (drops[i] * 20 > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+
+            ctx.shadowBlur = 0; // Remove shadow after drawing
+        }
+
+        setInterval(drawMatrix, 50);
+
+        // Schedule Timer Script
+        function updateTimer() {
+            let t = new Date();
+            let d = t.getDay();
+            let h = t.getHours();
+            let m = t.getUTCMinutes();
+            let s = t.getUTCSeconds();
+            let now = cs(h, m, s);
+
+            let ampm = h >= 12 ? "PM" : "AM";
+            let mh = h % 12 || 12;
+
+            function pad(num) {
+                return num.toString().padStart(2, '0');
+            }
+            function cs(h, m, s) {
+                return h * 3600 + m * 60 + s;
+            }
+            function ct(ts) {
+                let m = Math.floor((ts % 3600) / 60);
+                let s = ts % 60;
+                return `${m}min ${s}sec`;
+            }
+
+            document.getElementById("current-time").innerText = `${pad(mh)}:${pad(m)}:${pad(s)} ${ampm}`;
+
+            let times = [];
+            let periodNames = [];
+            let startTime = d === 3 ? cs(9, 0, 0) : cs(7, 45, 0);
+            let j = 0;
+
+            for (let i = startTime; i <= cs(15, 10, 0); ) {
+                j += 1;
+                if (d === 1 || d === 5) {
+                    times.push(i);
+                    periodNames.push("Period " + (j));
+                    i += i === cs(8, 41, 0) ? 53 * 60 : 50 * 60;
+                    times.push(i);
+                    periodNames.push("Passing Period");
+                    i += 6 * 60;
+                } else if (d === 3) {
+                    times.push(i);
+                    periodNames.push("Period " + (j));
+                    i += i === cs(12, 8, 0) ? 41 * 60 : 42 * 60;
+                    times.push(i);
+                    periodNames.push("Passing Period");
+                    i += 5 * 60;
+                } else if (d === 2 || d === 4 || d === 6 || d === 0) {
+                    times.push(i);
+                    periodNames.push("Period " + (j));
+                    i += 45 * 60;
+                    times.push(i);
+                    periodNames.push("Passing Period");
+                    i += 5 * 60;
+                    if (periodNames.length === 4) {
+                        times.push(i);
+                        periodNames.push("SOAR");
+                        i += 45 * 60;
+                        times.push(i);
+                        periodNames.push("Passing Period");
+                        i += 5 * 60;
+                    }
+                }
+            }
+
+            let tl = "Unknown";
+            let currentPeriod = "Unknown";
+
+            if (d === 0 || d === 6) {
+                tl = "Enjoy your day!";
+                currentPeriod = "Weekend";
+            } else if (now > cs(15, 10, 0)) {
+                tl = `Enjoy your day!`;
+                currentPeriod = "School Ended";
+            } else if (now < startTime) {
+                tl = `Till start: ${ct(startTime - now)}`;
+                currentPeriod = "Before School";
+            } else {
+                for (let i = 0; i < times.length; i++) {
+                    if (now < times[i]) {
+                        tl = `${ct(times[i] - now)} left`;
+                        currentPeriod = periodNames[i - 1] || "Unknown";
+                        break;
+                    }
+                }
+            }
+
+            document.getElementById("timer").innerText = tl;
+            document.getElementById("current-period").innerText = currentPeriod;
+        }
+
+        updateTimer();
+        setInterval(updateTimer, 1000);
+
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Slider for color change
+        const colorSlider = document.getElementById("colorSlider");
+
+        let matrixColor = "rgba(255, 0, 0, 1)";
+        let matrixGlowColor = "rgba(255, 80, 80, 1)";
+
+        colorSlider.addEventListener("input", (event) => {
+            const hue = event.target.value;
+
+            // Set color using hue from slider (0 - 360 degrees of the color wheel)
+            const containerColor = `hsl(${hue}, 100%, 20%)`; // Background of container
+            const borderColor = `hsl(${hue}, 100%, 50%)`; // Border color
+            const glowColor = `hsl(${hue}, 100%, 40%)`; // Glow effect color
+            const textColor = `hsl(${(hue + 180) % 360}, 100%, 80%)`; // Text color, complementary to background color
+
+            // Update container
+            document.querySelector(".container").style.backgroundColor = containerColor;
+            document.querySelector(".container").style.borderColor = borderColor;
+            document.querySelector(".container").style.boxShadow = `0 0 20px ${glowColor}`;
+
+            // Update matrix
+            matrixColor = `hsl(${hue}, 100%, 50%)`; // Matrix text color
+            matrixGlowColor = `hsl(${hue}, 100%, 40%)`; // Matrix glow color
+            
+            colorSlider.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+
+        });
+    </script>
+</body>
+</html>
